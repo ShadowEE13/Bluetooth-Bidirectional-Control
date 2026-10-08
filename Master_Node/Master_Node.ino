@@ -8,10 +8,10 @@ const int IN2 = 8;    // L293D 2A
 SoftwareSerial BT(10, 11);   // (RX, TX)
 
 // ===== 參數 =====
-const int MIN_PWM      = 115;    // 馬達起動門檻（換成你的實測值）
-const int POT_DEADBAND = 10;    // pot 小於此值視為「停」
+const int MIN_PWM      = 120;    // 馬達起動門檻
+const int POT_DEADBAND = 10;
 const unsigned long DEBOUNCE_MS = 50;
-const unsigned long TIMEOUT_MS  = 500;   // 超過這段時間沒收到 POT 就停馬達
+const unsigned long TIMEOUT_MS  = 1500;   // 超過這段時間沒收到 POT 就停馬達
 
 // ===== 按鈕狀態 =====
 int lastReading = HIGH;
@@ -23,7 +23,7 @@ String rxBuf = "";
 unsigned long lastPotTime = 0;
 bool motorRunning = false;
 
-// ---------- 馬達 ----------
+// ----- 馬達 -----
 void setMotor(int pot) {
   int pwm;
   if (pot < POT_DEADBAND) pwm = 0;
@@ -39,7 +39,7 @@ void setMotor(int pot) {
   Serial.println(pwm);
 }
 
-// ---------- 按鈕（含去彈跳，狀態改變才送）----------
+// ----- 按鈕 -----
 void checkButton() {
   int reading = digitalRead(BTN);
 
@@ -63,29 +63,30 @@ void checkButton() {
   lastReading = reading;
 }
 
-// ---------- 藍牙接收（非阻塞）----------
+// ----- 藍牙接收 -----
 void handleBT() {
   while (BT.available()) {
     char c = BT.read();
 
     if (c == '\n') {
-      rxBuf.trim();                                   // 去掉 \r
+      rxBuf.trim();
       if (rxBuf.startsWith("POT:") && rxBuf.length() > 4) {
         int pot = rxBuf.substring(4).toInt();
-        if (pot >= 0 && pot <= 1023) {                // 範圍檢查，過濾壞資料
+        if (pot >= 0 && pot <= 1023) {                // 範圍檢查
           setMotor(pot);
           lastPotTime = millis();
         }
       }
       rxBuf = "";
-    } else {
+    } 
+    else {
       rxBuf += c;
-      if (rxBuf.length() > 20) rxBuf = "";            // 防止沒收到 \n 時無限累積
+      if (rxBuf.length() > 20) rxBuf = "";            // 防止無限累積
     }
   }
 }
 
-// ---------- 斷線保護 ----------
+// ---- 斷線保護 ----
 void checkTimeout() {
   if (motorRunning && millis() - lastPotTime > TIMEOUT_MS) {
     analogWrite(EN, 0);
@@ -97,14 +98,14 @@ void checkTimeout() {
 void setup() {
   Serial.begin(9600);
   BT.begin(9600);
-  rxBuf.reserve(24);           // 預先配置記憶體，減少碎片化
+  rxBuf.reserve(24);           // 預先配置rxbuf的記憶體
 
   pinMode(BTN, INPUT_PULLUP);
   pinMode(EN,  OUTPUT);
   pinMode(IN1, OUTPUT);
   pinMode(IN2, OUTPUT);
 
-  digitalWrite(IN1, HIGH);     // 固定正轉
+  digitalWrite(IN1, HIGH);
   digitalWrite(IN2, LOW);
   analogWrite(EN, 0);
 
